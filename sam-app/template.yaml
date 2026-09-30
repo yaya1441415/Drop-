@@ -18,6 +18,8 @@ Globals:
         TABLE_NAME: !Ref PostsTable
         POST_LIFETIME_SECONDS: "172800"
         DYNAMODB_ENDPOINT: ""
+        REDIS_HOST: ""
+        CACHE_STRATEGY: "lazy"
 Resources:
   CreatePost:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
