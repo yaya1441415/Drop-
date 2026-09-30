@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+#default settings , apply to every ressource of that type in template
+Globals:
+  Function:
+    Timeout: 40
+    Runtime: python3.12
+    MemorySize: 512
+    Architectures: 
+      - x86_64
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref PostsTable
+        POST_LIFETIME_SECONDS: "172800"
+        DYNAMODB_ENDPOINT: ""
+Resources:
+  CreatePost:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/
+      Handler: create_post.handler
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref PostsTable
+      Events:
+        Create:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /posts
+            Method: post
+  GetPost:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: get_post.handler
+      Policies:
+         - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt PostsTable.Arn
+      Events:
+        List:
+          Type: Api
+          Properties:
+            Path: /posts/{id}
+            Method: get
+  ListPosts:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: list_posts.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PostsTable
+      Events:
+        List:
+          Type: Api
+          Properties:
+            Path: /posts
+            Method: get
+  PostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: type
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: N
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: expiry
+        Enabled: true  
+      GlobalSecondaryIndexes:
+        - IndexName: TypeCreatedAtIndex
+          KeySchema:
+            - AttributeName: type
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+  
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
